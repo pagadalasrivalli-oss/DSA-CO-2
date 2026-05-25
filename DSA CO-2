@@ -1,0 +1,89 @@
+import java.util.*;
+
+class IndexEntry {
+    int offset;
+    int position;
+
+    IndexEntry(int offset, int position) {
+        this.offset = offset;
+        this.position = position;
+    }
+}
+
+class KafkaLog {
+    List<Integer> log = new ArrayList<>();
+    List<IndexEntry> index = new ArrayList<>();
+
+    int interval = 4; // simulate sparse index (every 4 records)
+
+    // Insert records
+    void insert(int value) {
+        log.add(value);
+
+        int currentOffset = log.size() - 1;
+
+        // Create sparse index entry
+        if (currentOffset % interval == 0) {
+            index.add(new IndexEntry(currentOffset, currentOffset));
+        }
+    }
+
+    // Binary search on index
+    int binarySearchIndex(int targetOffset) {
+        int left = 0, right = index.size() - 1;
+        int result = 0;
+
+        while (left <= right) {
+            int mid = (left + right) / 2;
+
+            if (index.get(mid).offset == targetOffset) {
+                return mid;
+            } else if (index.get(mid).offset < targetOffset) {
+                result = mid;
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        return result;
+    }
+
+    // Find record using sparse index
+    void findRecord(int targetOffset) {
+        int steps = 0;
+
+        // Step 1: Binary search
+        int idx = binarySearchIndex(targetOffset);
+        steps += (int)(Math.log(index.size()) / Math.log(2)); // approx log n
+
+        IndexEntry entry = index.get(idx);
+
+        // Step 2: Jump to position
+        int pos = entry.position;
+
+        // Step 3: Sequential scan
+        while (pos < log.size() && pos != targetOffset) {
+            pos++;
+            steps++;
+        }
+
+        System.out.println("Target Offset: " + targetOffset);
+        System.out.println("Found Value: " + log.get(pos));
+        System.out.println("Steps Taken (log n + k): " + steps);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+
+        KafkaLog kafka = new KafkaLog();
+
+        // Simulate 100 records
+        for (int i = 0; i < 100; i++) {
+            kafka.insert(i * 10);
+        }
+
+        // Search example
+        kafka.findRecord(73);
+    }
+}
